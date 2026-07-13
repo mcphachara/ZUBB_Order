@@ -1377,6 +1377,13 @@ footer a { color: var(--yellow); text-decoration: none; }
           <input type="hidden" name="package" id="f-pkg" value="6 กล่อง — 1,900.-">
         </div>
         <div class="fg">
+          <label for="f-address">ที่อยู่สำหรับจัดส่ง *</label>
+          <div class="fake-ph-wrap">
+            <textarea id="f-address" name="address" rows="2" required></textarea>
+            <span class="fake-ph fake-ph-top">กรอกรายละเอียด อาคารบ้านเลขที่, ตรอก/ซอย, ถนน ตำบล/แขวง, อำเภอ/เขต, จังหวัด และรหัสไปรษณีย์</span>
+          </div>
+        </div>
+        <div class="fg">
           <label for="f-note">หมายเหตุ (ถ้ามี)</label>
           <div class="fake-ph-wrap">
             <textarea id="f-note" name="note" rows="2"></textarea>
@@ -1516,7 +1523,11 @@ document.querySelectorAll('.fake-ph-wrap').forEach(wrap => {
 
    ① Google Sheet
    1. เปิด Google Sheet ใหม่ → ตั้งชื่อ Header ใน Row 1:
-      Timestamp | ชื่อ | โทรศัพท์ | ติดต่อผ่าน | แพ็กเกจ | หมายเหตุ
+      Timestamp | ชื่อ | โทรศัพท์ | ติดต่อผ่าน | แพ็กเกจ | ที่อยู่จัดส่ง | หมายเหตุ
+
+      *** Feedback13: ถ้า Sheet เดิมมี Header อยู่แล้ว (ไม่มีคอลัมน์ "ที่อยู่จัดส่ง") ***
+      ให้แทรกคอลัมน์ใหม่ 1 คอลัมน์ระหว่าง "แพ็กเกจ" กับ "หมายเหตุ" แล้วตั้งชื่อ "ที่อยู่จัดส่ง"
+      (คลิกขวาที่หัวคอลัมน์ "หมายเหตุ" → Insert 1 column left)
 
    ② Google Chat Webhook
    1. เปิด Google Chat → ไปที่ Space ที่ต้องการรับแจ้งเตือน
@@ -1533,7 +1544,7 @@ document.querySelectorAll('.fake-ph-wrap').forEach(wrap => {
       function doPost(e) {
         var sh = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
         var d  = JSON.parse(e.postData.contents);
-        sh.appendRow([d.ts, d.name, d.phone, d.contact_method, d.package, d.note || '-']);
+        sh.appendRow([d.ts, d.name, d.phone, d.contact_method, d.package, d.address || '-', d.note || '-']);
 
         // ส่งแจ้งเตือนเข้า Google Chat
         if (CHAT_WEBHOOK_URL.indexOf('https://') === 0) {
@@ -1542,6 +1553,7 @@ document.querySelectorAll('.fake-ph-wrap').forEach(wrap => {
             'เบอร์: ' + d.phone + '\n' +
             'แพ็กเกจ: ' + d.package + '\n' +
             'ติดต่อผ่าน: ' + d.contact_method + '\n' +
+            'ที่อยู่จัดส่ง: ' + (d.address || '-') + '\n' +
             'หมายเหตุ: ' + (d.note || '-') + '\n' +
             'เวลา: ' + d.ts;
           UrlFetchApp.fetch(CHAT_WEBHOOK_URL, {
@@ -1555,6 +1567,12 @@ document.querySelectorAll('.fake-ph-wrap').forEach(wrap => {
           .createTextOutput(JSON.stringify({ status: 'ok' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
+
+      *** Feedback13: ถ้ามี Apps Script เดิมอยู่แล้ว (deploy ไปแล้ว) ***
+      แค่แก้บรรทัด sh.appendRow(...) กับบรรทัด 'ที่อยู่จัดส่ง': ... ในตัวแปร msg
+      ตามโค้ดด้านบน (เพิ่ม d.address เข้าไป) ไม่ต้องลบของเดิมทั้งหมด แค่แก้ 2 จุดนี้พอ
+      แล้วไป Deploy → Manage deployments → กดไอคอนดินสอ → Version: New version → Deploy
+      (ไม่ต้องเปลี่ยน SCRIPT_URL ในเว็บ เพราะ URL เดิมยังใช้ได้)
 
    3. คลิก Deploy → New deployment → Web app
       - Execute as: Me
@@ -1578,6 +1596,7 @@ document.getElementById('order-form').addEventListener('submit', async e => {
     phone:          fd.get('phone'),
     contact_method: fd.get('contact_method'),
     package:        document.getElementById('f-pkg').value,
+    address:        fd.get('address'),
     note:           fd.get('note') || '-'
   };
 
